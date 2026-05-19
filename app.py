@@ -11,10 +11,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Serve the static folder (index.html, css, js)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# In-memory job store  (swap for Redis in production)
+
 jobs: dict = {}
 
 
@@ -47,14 +47,14 @@ def _run_job(job_id: str, user_request: str):
         print(f"[job {job_id}] ERROR: {e}")
 
 
-# ── Frontend ──────────────────────────────────────────────────────────────────
+
 
 @app.get("/")
 async def index():
     return FileResponse("static/index.html")
 
 
-# ── API ───────────────────────────────────────────────────────────────────────
+
 
 @app.post("/generate", response_model=JobStatus)
 async def generate(req: GenerateRequest, background_tasks: BackgroundTasks):
