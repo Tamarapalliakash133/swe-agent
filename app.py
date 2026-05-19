@@ -49,7 +49,7 @@ def _run_job(job_id: str, user_request: str):
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
-@app.get("/")
+@app.get("/", methods = ["GET","HEAD"])
 async def index():
     return FileResponse("static/index.html")
 
