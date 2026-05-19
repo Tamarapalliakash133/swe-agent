@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWE Agent</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f0f;
+      --surface:  #1a1a1a;
+      --border:   #2a2a2a;
+      --text:     #e8e8e8;
+      --muted:    #666;
+      --accent:   #4f8ef7;
+      --success:  #3ecf8e;
+      --error:    #f05b5b;
+      --radius:   8px;
+      --font:     'Courier New', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 40px;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    header {
+      margin-bottom: 48px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: normal;
+      letter-spacing: 0.12em;
+      color: var(--text);
+    }
+
+    header p {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Input card ───────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding: 14px;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    button#generateBtn {
+      margin-top: 14px;
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    button#generateBtn:hover:not(:disabled) { opacity: 0.85; }
+    button#generateBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Status section ───────────────────────────────────── */
+    #status-section {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .status-bar {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.82rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--muted);
+    }
+
+    .dot.running  { background: var(--accent); animation: pulse 1.2s infinite; }
+    .dot.done     { background: var(--success); }
+    .dot.error    { background: var(--error); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    #status-text { color: var(--text); }
+
+    /* ── Steps log ────────────────────────────────────────── */
+    #steps {
+      margin-top: 16px;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 2;
+      border-left: 2px solid var(--border);
+      padding-left: 14px;
+    }
+
+    #steps .step { display: block; }
+    #steps .step.active { color: var(--accent); }
+    #steps .step.done   { color: var(--success); }
+
+    /* ── Download button ──────────────────────────────────── */
+    #downloadBtn {
+      display: none;
+      margin-top: 20px;
+      width: 100%;
+      background: transparent;
+      color: var(--success);
+      border: 1px solid var(--success);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    #downloadBtn:hover {
+      background: var(--success);
+      color: #000;
+    }
+
+    /* ── Error message ────────────────────────────────────── */
+    #errorMsg {
+      display: none;
+      margin-top: 14px;
+      font-size: 0.78rem;
+      color: var(--error);
+      border: 1px solid var(--error);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <h1>[ SWE AGENT ]</h1>
+      <p>describe your project — get a zip</p>
+    </header>
+
+    <div class="card">
+      <label for="requestInput">Project Request</label>
+      <textarea
+        id="requestInput"
+        placeholder="Build a FastAPI blog API with JWT authentication and PostgreSQL"
+        rows="4"
+      ></textarea>
+      <button id="generateBtn" onclick="generate()">Generate Project</button>
+    </div>
+
+    <div id="status-section">
+      <div class="status-bar">
+        <div class="dot" id="dot"></div>
+        <span id="status-text">Starting…</span>
+      </div>
+
+      <div id="steps">
+        <span class="step" id="s-analyze">  analyzing request</span>
+        <span class="step" id="s-architect"> designing architecture</span>
+        <span class="step" id="s-plan">     planning tasks</span>
+        <span class="step" id="s-files">    mapping files</span>
+        <span class="step" id="s-code">     generating code</span>
+        <span class="step" id="s-exec">     running sandbox</span>
+        <span class="step" id="s-test">     writing tests</span>
+        <span class="step" id="s-readme">   writing readme</span>
+        <span class="step" id="s-pack">     packaging zip</span>
+      </div>
+
+      <div id="errorMsg"></div>
+      <button id="downloadBtn" onclick="download()">Download Project</button>
+    </div>
+
+  </div>
+
+  <script>
+    let currentJobId = null;
+    let pollInterval = null;
+    let stepIndex = 0;
+
+    const steps = [
+      's-analyze', 's-architect', 's-plan', 's-files',
+      's-code', 's-exec', 's-test', 's-readme', 's-pack'
+    ];
+
+    // Map backend status → which step to highlight
+    const statusToStep = {
+      queued:              0,
+      running:             0,
+      structure_created:   3,
+      code_generated:      4,
+      execution_success:   5,
+      execution_failed:    5,
+      retrying_execution:  5,
+      debug_exhausted:     5,
+      tests_generated:     6,
+      readme_generated:    7,
+      complete:            8,
+    };
+
+    function setStep(idx) {
+      steps.forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.className = 'step';
+        if (i < idx)       el.classList.add('done');
+        else if (i === idx) el.classList.add('active');
+      });
+    }
+
+    async function generate() {
+      const input = document.getElementById('requestInput').value.trim();
+      if (!input) return;
+
+      // Reset UI
+      document.getElementById('generateBtn').disabled = true;
+      document.getElementById('downloadBtn').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('status-section').style.display = 'block';
+      document.getElementById('dot').className = 'dot running';
+      document.getElementById('status-text').textContent = 'Queuing job…';
+      setStep(0);
+
+      try {
+        const res = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ request: input })
+        });
+        const data = await res.json();
+        currentJobId = data.job_id;
+        poll();
+      } catch (err) {
+        showError('Failed to reach the server. Is it running?');
+      }
+    }
+
+    function poll() {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(checkStatus, 2500);
+    }
+
+    async function checkStatus() {
+      if (!currentJobId) return;
+      try {
+        const res  = await fetch(`/status/${currentJobId}`);
+        const data = await res.json();
+        const s    = data.status;
+
+        // Advance step indicator
+        const idx = statusToStep[s] ?? stepIndex;
+        stepIndex = idx;
+        setStep(idx);
+
+        document.getElementById('status-text').textContent = formatStatus(s);
+
+        if (s === 'complete' || s === 'tests_generated' || s === 'readme_generated') {
+          clearInterval(pollInterval);
+          setStep(steps.length);           // mark all done
+          document.getElementById('dot').className = 'dot done';
+          document.getElementById('status-text').textContent = 'Project ready';
+          document.getElementById('downloadBtn').style.display = 'block';
+          document.getElementById('generateBtn').disabled = false;
+        }
+
+        if (s === 'error') {
+          clearInterval(pollInterval);
+          document.getElementById('dot').className = 'dot error';
+          document.getElementById('status-text').textContent = 'Build failed';
+          showError(data.error || 'An unknown error occurred.');
+          document.getElementById('generateBtn').disabled = false;
+        }
+
+      } catch (err) {
+        // Network hiccup — keep polling
+      }
+    }
+
+    function download() {
+      if (!currentJobId) return;
+      window.location.href = `/download/${currentJobId}`;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function formatStatus(s) {
+      const map = {
+        queued:              'Queued…',
+        running:             'Analyzing request…',
+        structure_created:   'Folder structure created…',
+        code_generated:      'Code generated, running sandbox…',
+        execution_success:   'Sandbox passed, writing tests…',
+        execution_failed:    'Errors found, debugging…',
+        retrying_execution:  'Retrying after debug patch…',
+        debug_exhausted:     'Debug limit reached, continuing…',
+        tests_generated:     'Tests written, generating readme…',
+        readme_generated:    'Packaging project…',
+        complete:            'Project ready',
+        error:               'Build failed',
+      };
+      return map[s] || s;
+    }
+  </script>
+</body>
+</html>
